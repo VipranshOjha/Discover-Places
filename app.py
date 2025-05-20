@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 import re
 from model import UserInteraction
-from Recomended_for_you import recommend_interest_and_pincode as context_recommender
+from Recommended_for_you import recommend_interest_and_pincode as context_recommender
 from People_also_search_for import (
     recommend_interest_and_pincode as collab_recommender_fn,
     CollaborativeRecommender
