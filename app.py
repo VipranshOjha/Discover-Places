@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, make_response
 import requests
 import os
 from dotenv import load_dotenv
 import re
+import jwt
+from datetime import datetime, timedelta
 from model import UserInteraction
 from Recommended_for_you import recommend_interest_and_pincode as context_recommender
 from People_also_search_for import (
@@ -14,12 +16,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 collab_recommender = CollaborativeRecommender()
 
-# Load .env variables 
 load_dotenv()
+
+JWT_SECRET = 'super_secret_jwt_key'
+JWT_EXPIRY_MINUTES = 15 #Expires in 15 minutes
 
 app = Flask(__name__)
 
-app.secret_key = 'your_secret_key_here'  # Required for session management
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:boathead@localhost/test'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -40,6 +43,27 @@ class UserInteraction(db.Model):
     pincode = db.Column(db.String(10), nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False)
 
+def generate_jwt(user_id, username):
+    payload = {
+        'user_id': user_id,
+        'username': username,
+        'exp': datetime.utcnow() + timedelta(minutes=JWT_EXPIRY_MINUTES)
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+    return token
+
+def get_current_user():
+    token = request.cookies.get('jwt_token')
+    if not token:
+        return None
+    try:
+        decoded = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        return User.query.get(decoded['user_id'])
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     message = ''
@@ -50,11 +74,13 @@ def login():
         user = User.query.filter((User.username == identifier) | (User.email == identifier)).first()
 
         if user and check_password_hash(user.password, password):
-            session['user_id'] = user.id
-            session['username'] = user.username
-            return redirect(url_for('index'))
+            token = generate_jwt(user.id, user.username)
+            response = redirect(url_for('index'))
+            response.set_cookie('jwt_token', token, httponly=True)
+            return response
         else:
             message = 'Invalid username/email or password.'
+
     return render_template('login.html', message=message)
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -74,12 +100,8 @@ def signup():
             return redirect(url_for('login', signed_up='1'))
     return render_template('signup.html', message=message)
 
-# API key 
 API_KEY = os.environ.get("GOMAPS_API_KEY")
 
-print("API Key loaded:", API_KEY)
-
-# Map user-friendly interest to real search categories
 INTEREST_KEYWORDS = {
     "education": "school OR college OR university OR coaching center",
     "healthcare": "hospital OR clinic OR pharmacy",
@@ -97,9 +119,108 @@ def get_map_link(place_name, address):
 
 @app.route('/')
 def index():
-    if 'user_id' not in session:
+    user = get_current_user()
+    if not user:
         return redirect(url_for('login'))
-    return render_template('index.html', username=session.get('username'))
+    return render_template('index.html', username=user.username)
+
+@app.route('/logout')
+def logout():
+    response = redirect(url_for('login', logged_out=1))
+    response.delete_cookie('jwt_token')
+    return response
+
+@app.route('/search', methods=['POST'])
+def search_places():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.json
+    pincode = data.get('pincode')
+    interest = data.get('interest')
+
+    if not pincode or not interest:
+        return jsonify({"error": "PIN code and interest are required"}), 400
+
+    user.preferred_pincode = pincode
+    user.field_of_interest = interest
+    db.session.commit() 
+
+    interaction = UserInteraction(
+        user_id=str(user.id),
+        interest=interest,
+        pincode=pincode,
+        timestamp=datetime.now()
+    )
+    db.session.add(interaction)
+    db.session.commit()
+    collab_recommender.add_interaction(interaction)
+
+    return search_places_core(pincode, interest)
+
+@app.route('/recommend/context', methods=['POST'])
+def recommend_contextual():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not user.preferred_pincode or not user.field_of_interest:
+        return jsonify({"results": []})
+
+    recent_interactions = (
+        UserInteraction.query
+        .filter_by(user_id=str(user.id))
+        .order_by(UserInteraction.timestamp.desc())
+        .limit(5)
+        .all()
+    )
+
+    searches = [
+        {'interest': i.interest, 'pincode': i.pincode}
+        for i in recent_interactions
+    ]
+
+    recommendation = context_recommender(searches)
+    if not recommendation:
+        return jsonify({"results": []})
+
+    interest, pincode = recommendation
+    return search_places_core(pincode, interest)
+
+@app.route('/recommend/collaborative', methods=['POST'])
+def recommend_collaborative():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not user.preferred_pincode or not user.field_of_interest:
+        return jsonify({"results": []})
+
+    searches = [{'interest': user.field_of_interest, 'pincode': user.preferred_pincode}]
+    recommendation = collab_recommender_fn(
+        searches,
+        user_id=str(user.id),
+        collaborative_recommender=collab_recommender
+    )
+    if not recommendation:
+        return jsonify({"results": []})
+
+    interest, pincode = recommendation
+    return search_places_core(pincode, interest)
+
+@app.route('/recommend', methods=['POST'])
+def recommend_places():
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not user.preferred_pincode or not user.field_of_interest:
+        return jsonify({"results": []})
+
+    pincode = user.preferred_pincode
+    interest = user.field_of_interest
+    return search_places_core(pincode, interest)
 
 def search_places_core(pincode, interest):
     if not pincode or not interest:
@@ -125,7 +246,7 @@ def search_places_core(pincode, interest):
             'key': API_KEY
         }
         geo_resp = requests.get(geocode_url, params=geocode_params).json()
-        print("Geocode API response:", geo_resp)  # Debug print
+        print("Geocode API response:", geo_resp)
 
         if 'status' not in geo_resp:
             return jsonify({"error": "Geocode API response missing 'status'. Full response: {}".format(geo_resp)}), 500
@@ -140,7 +261,7 @@ def search_places_core(pincode, interest):
         query_term = INTEREST_KEYWORDS.get(interest.lower(), interest)
         search_query = f"{query_term} in {district}, {state}, India"
 
-        print("🔍 GOMAPS Query:", search_query)
+        print("GOMAPS Query:", search_query)
 
         # Step 2: Use lat/lng and radius in textsearch
         search_url = f"https://maps.gomaps.pro/maps/api/place/textsearch/json"
@@ -158,7 +279,7 @@ def search_places_core(pincode, interest):
             return jsonify({"error": "Failed to contact GOMAPS API"}), 500
 
         search_data = search_response.json()
-        print("🧾 GOMAPS API Response:", search_data.get("status"))
+        print("GOMAPS API Response:", search_data.get("status"))
 
         if search_data.get("status") != "OK":
             return jsonify({"error": f"GOMAPS API error: {search_data.get('status')}"}), 500
@@ -207,111 +328,8 @@ def search_places_core(pincode, interest):
         return jsonify({"results": all_results})
 
     except Exception as e:
-        print("❌ Exception:", e)
+        print("Exception:", e)
         return jsonify({"error": str(e)}), 500
-
-@app.route('/search', methods=['POST'])
-def search_places():
-    data = request.json
-    pincode = data.get('pincode')
-    interest = data.get('interest')
-
-    if not pincode or not interest:
-        return jsonify({"error": "PIN code and interest are required"}), 400
-
-    # ✅ Update the logged-in user's preferences
-    if 'user_id' in session:
-        user = User.query.get(session['user_id'])
-        if user:
-            user.preferred_pincode = pincode
-            user.field_of_interest = interest
-            db.session.commit()
-
-            # Also record for collaborative filtering
-            from datetime import datetime
-            interaction = UserInteraction(
-                user_id=str(user.id),
-                interest=interest,
-                pincode=pincode,
-                timestamp=datetime.now()
-            )
-            db.session.add(interaction)
-            db.session.commit()
-            collab_recommender.add_interaction(interaction)
-
-    return search_places_core(pincode, interest)
-
-@app.route('/recommend/context', methods=['POST'])
-def recommend_contextual():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    user = User.query.get(session['user_id'])
-    if not user or not user.preferred_pincode or not user.field_of_interest:
-        return jsonify({"results": []})
-
-    recent_interactions = (
-        UserInteraction.query
-        .filter_by(user_id=str(user.id))
-        .order_by(UserInteraction.timestamp.desc())
-        .limit(5)
-        .all()
-    )
-
-    searches = [
-        {'interest': i.interest, 'pincode': i.pincode}
-        for i in recent_interactions
-    ]
-
-    recommendation = context_recommender(searches)
-    if not recommendation:
-        return jsonify({"results": []})
-
-    interest, pincode = recommendation
-    return search_places_core(pincode, interest)
-
-@app.route('/recommend/collaborative', methods=['POST'])
-def recommend_collaborative():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    user = User.query.get(session['user_id'])
-    if not user or not user.preferred_pincode or not user.field_of_interest:
-        return jsonify({"results": []})
-
-    searches = [{'interest': user.field_of_interest, 'pincode': user.preferred_pincode}]
-    recommendation = collab_recommender_fn(
-        searches,
-        user_id=str(user.id),
-        collaborative_recommender=collab_recommender
-    )
-    if not recommendation:
-        return jsonify({"results": []})
-
-    interest, pincode = recommendation
-    return search_places_core(pincode, interest)
-
-@app.route('/recommend', methods=['POST'])
-def recommend_places():
-    if 'user_id' not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    # Fetch the logged-in user
-    user = User.query.get(session['user_id'])
-    if not user or not user.preferred_pincode or not user.field_of_interest:
-        return jsonify({"results": []})
-
-    # Use the saved preferences
-    pincode = user.preferred_pincode
-    interest = user.field_of_interest
-
-    print(f"🔍 Fetching recommendations for user {user.username}: {interest}, {pincode}")
-    return search_places_core(pincode, interest)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login', logged_up='1'))
 
 if __name__ == '__main__':
     with app.app_context():
