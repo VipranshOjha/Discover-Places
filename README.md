@@ -27,18 +27,14 @@ An intelligent, lightweight platform to discover, recommend, and explore places 
 
 ## 🖼️ UI Preview
 
-# Signup Page
-![Signup Page](static/img/Signup.png)
-# Login Page 
-![Login Page](static/img/Login.png) 
-# Home Page 
-![Home Page](static/img/Search%20Places.png)
-# Recommendation 
-Content-Based Filtering
-![Recommend](static/img/Recommended%20For%20You.png)
+# 📝 Signup & Login
+<p align="center"> <img src="static/img/Signup.png" alt="Signup Page" width="45%" /> <img src="static/img/Login.png" alt="Login Page" width="45%" /> </p>
 
-Popularity-Based Ranking
-![Recommend](static/img/People%20Also%20Search%20For.png)
+# 🏠 Home 
+<p align="center"> <img src="static/img/Search%20Places.png" alt="Home Page" width="50%" /> </p>
+
+# 🔥 Content-Based & Popularity-Based Recommendation
+<p align="center">  <img src="static/img/Recommended%20For%20You.png" alt="Content-Based Recommendation" width="45%" /> <img src="static/img/People%20Also%20Search%20For.png" alt="Popularity-Based Recommendation" width="45%" /> </p>
 
 ---
 
