@@ -149,11 +149,4 @@ Pull requests are welcome! Please open an issue first for major changes.
 
 ---
 
-## 📬 Connect with Me
-LinkedIn
-
-GitHub
-
----
-
 Built with ❤️, PostgreSQL, Flask, and a curiosity for exploration.
