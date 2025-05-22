@@ -35,7 +35,7 @@ The platform uses **JWT-based authentication**, a **PostgreSQL database**, and t
 <p align="center"> <img src="static/img/Signup.png" alt="Signup Page" width="45%" /> <img src="static/img/Login.png" alt="Login Page" width="45%" /> </p>
 
 # 🔐 Admin & 🏠 Home 
-<p align="center"> <img src="static/img/Admin%20Dashboard.png" alt="Home Page" width="50%" /> <img src="static/img/Search%20Places.png" alt="Home Page" width="50%" /> </p>
+<p align="center"> <img src="static/img/Admin%20Dashboard.png" alt="Home Page" width="45%" /> <img src="static/img/Search%20Places.png" alt="Home Page" width="45%" /> </p>
 
 # 🔥 Content-Based & Popularity-Based Recommendation
 <p align="center">  <img src="static/img/Recommended%20For%20You.png" alt="Content-Based Recommendation" width="45%" /> <img src="static/img/People%20Also%20Search%20For.png" alt="Popularity-Based Recommendation" width="45%" /> </p>
