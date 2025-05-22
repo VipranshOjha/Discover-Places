@@ -3,19 +3,79 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from collections import Counter
 import requests
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import extract, func
+
+db = SQLAlchemy()
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    preferred_pincode = db.Column(db.String(6))
+    field_of_interest = db.Column(db.String(80))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserInteraction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(80), nullable=False)
+    interest = db.Column(db.String(80), nullable=False)
+    pincode = db.Column(db.String(10), nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False)
+
+    @classmethod
+    def most_active_time_of_day(cls, user_id):
+        """
+        Returns the most active time category for a user based on their interaction timestamps.
+        """
+        from model import get_time_category
+        interactions = cls.query.filter_by(user_id=user_id).all()
+        if not interactions:
+            return None
+        time_categories = [get_time_category(i.timestamp.hour) for i in interactions]
+        if not time_categories:
+            return None
+        from collections import Counter
+        most_common = Counter(time_categories).most_common(1)
+        return most_common[0][0] if most_common else None
+
+    @classmethod
+    def most_active_hour(cls, user_id=None):
+        """
+        Returns the hour(s) of day with the most interactions. If user_id is provided, filters by user.
+        Returns a list of (hour, count) tuples sorted by hour.
+        """
+        query = db.session.query(
+            extract('hour', cls.timestamp).label('hour'),
+            func.count().label('count')
+        )
+        if user_id:
+            query = query.filter(cls.user_id == user_id)
+        query = query.group_by('hour').order_by('hour')
+        return query.all()
+
+    @classmethod
+    def interest_by_hour(cls, user_id=None):
+        """
+        Returns a list of (hour, interest, count) tuples, showing how many times each interest was searched per hour.
+        If user_id is provided, filters by user.
+        """
+        query = db.session.query(
+            extract('hour', cls.timestamp).label('hour'),
+            cls.interest,
+            func.count().label('count')
+        )
+        if user_id:
+            query = query.filter(cls.user_id == user_id)
+        query = query.group_by('hour', cls.interest).order_by('hour')
+        return query.all()
 
 @dataclass
 class WeatherData:
     temperature: float
     condition: str
     is_day: bool
-
-@dataclass
-class UserInteraction:
-    user_id: str
-    interest: str
-    pincode: str
-    timestamp: datetime
 
 def get_time_category(hour: int) -> str:
     """Convert hour to time category with more specific slots"""
@@ -49,6 +109,7 @@ def get_seasonal_category(month: int) -> str:
     """Determine seasonal category with more specific patterns"""
     # Festive seasons (approximate months)
     festive_months = {
+        
         1: "new_year",      
         3: "holi",          
         4: "easter",        

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import re
 import jwt
 from datetime import datetime, timedelta
-from model import UserInteraction
+from model import db, User, UserInteraction
 from Recommended_for_you import recommend_interest_and_pincode as context_recommender
 from People_also_search_for import (
     recommend_interest_and_pincode as collab_recommender_fn,
@@ -13,6 +13,8 @@ from People_also_search_for import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from admin import admin_bp
+from sqlalchemy.sql import func, desc
 
 collab_recommender = CollaborativeRecommender()
 
@@ -26,22 +28,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:boathead@localhost/test'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(200), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    preferred_pincode = db.Column(db.String(6))
-    field_of_interest = db.Column(db.String(80))
-
-class UserInteraction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(80), nullable=False)
-    interest = db.Column(db.String(80), nullable=False)
-    pincode = db.Column(db.String(10), nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False)
+db.init_app(app)
 
 def generate_jwt(user_id, username):
     payload = {
@@ -63,6 +50,8 @@ def get_current_user():
         return None
     except jwt.InvalidTokenError:
         return None
+
+app.register_blueprint(admin_bp, url_prefix='/admin')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -120,9 +109,7 @@ def get_map_link(place_name, address):
 @app.route('/')
 def index():
     user = get_current_user()
-    if not user:
-        return redirect(url_for('login'))
-    return render_template('index.html', username=user.username)
+    return render_template('index.html', username=user.username if user else None)
 
 @app.route('/logout')
 def logout():
@@ -132,9 +119,32 @@ def logout():
 
 @app.route('/search', methods=['POST'])
 def search_places():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+    user = get_current_user()  # Might be None
+
+    data = request.json
+    pincode = data.get('pincode')
+    interest = data.get('interest')
+
+    if not pincode or not interest:
+        return jsonify({"error": "PIN code and interest are required"}), 400
+
+    # Save for logged in user only
+    if user:
+        user.preferred_pincode = pincode
+        user.field_of_interest = interest
+        db.session.commit()
+
+        interaction = UserInteraction(
+            user_id=str(user.id),
+            interest=interest,
+            pincode=pincode,
+            timestamp=datetime.now()
+        )
+        db.session.add(interaction)
+        db.session.commit()
+        collab_recommender.add_interaction(interaction)
+
+    return search_places_core(pincode, interest)
 
     data = request.json
     pincode = data.get('pincode')
@@ -158,6 +168,14 @@ def search_places():
     collab_recommender.add_interaction(interaction)
 
     return search_places_core(pincode, interest)
+
+@app.route('/me')
+def check_login():
+    user = get_current_user()
+    return jsonify({
+        "logged_in": bool(user),
+        "username": user.username if user else None
+    })
 
 @app.route('/recommend/context', methods=['POST'])
 def recommend_contextual():
@@ -333,6 +351,7 @@ def search_places_core(pincode, interest):
 
 if __name__ == '__main__':
     with app.app_context():
-        # Create tables if they don't exist
         db.create_all()
+        # print("Registered routes:")
+        # print(app.url_map)
     app.run(debug=True)
