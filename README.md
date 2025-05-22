@@ -1,28 +1,32 @@
 # 🌍 Discover Places
 
-An intelligent, lightweight platform to discover, recommend, and explore places — built with Flask, HTML, and machine learning magic.
+> A smart, lightweight web app to help users explore new places and get personalized recommendations — powered by machine learning and Flask.
 
 ---
 
-## 🧠 What is *Discover Places*?
+## 🔎 What is Discover Places?
 
-**Discover Places** is a web-based application that helps users find interesting places, get smart recommendations, and navigate to them using Google Maps. Unlike traditional search engines, this platform learns from **user preferences** and **place data** to offer relevant suggestions using **machine learning models**.
+**Discover Places** is a full-stack Python web application that allows users to:
+- Explore interesting locations
+- Like and save their favorite spots
+- Receive personalized place recommendations
 
-✅ Think TripAdvisor meets a personal recommender, but simpler and smarter.
+The platform uses **JWT-based authentication**, a **PostgreSQL database**, and two ML-based engines: **content-based filtering** and **popularity-based ranking** — all served via a clean Flask backend and HTML frontend.
 
 ---
 
 ## ✨ Features
 
-- 🔐 User login & registration (JWT Auth)
-- 🏞️ Browse & discover new places
+- 🔐 JWT-based Login and Signup
+- 🏙️ Browse curated places
 - ❤️ Like places you enjoy
-- 📍 Redirect to Google Maps for navigation
-- 📈 Smart recommendations using ML
-- 🧠 Two recommendation systems:
+- 🧠 Personalized Recommendations:
   - Content-Based Filtering
   - Popularity-Based Ranking
-  - 
+- 🗺️ One-click Google Maps Redirection
+- 🗃️ PostgreSQL-powered backend for data persistence
+- 📄 Modular ML code for easy extensibility
+
 ---
 
 ## 🖼️ UI Preview
@@ -40,93 +44,116 @@ An intelligent, lightweight platform to discover, recommend, and explore places 
 
 ## 🧰 Tech Stack
 
-| Layer       | Technology             |
-|-------------|------------------------|
-| 🌐 Frontend | HTML, CSS, JavaScript   |
-| 🧠 Backend  | Python, Flask          |
-| 🧪 ML Models | Scikit-learn, Pandas   |
-| 📍 Maps     | GoMapsPro API (fetching), Google Maps (redirection) |
+| Layer        | Technology               |
+|--------------|---------------------------|
+| Backend      | Python, Flask             |
+| Frontend     | HTML, CSS, Bootstrap      |
+| Database     | PostgreSQL                |
+| Auth         | JWT (JSON Web Tokens)     |
+| ML Models    | Scikit-learn, Pandas      |
+| Maps         | GoMapsPro (fetching), Google Maps (navigation) |
 
 ---
 
-## 📦 Folder Structure
+## 🧠 Recommendation System
+
+The app features two types of recommendation models:
+
+1. **Content-Based Filtering**
+   - Recommends places similar to the ones a user has liked
+   - Based on metadata like category, tags, etc.
+
+2. **Popularity-Based Ranking**
+   - Ranks places by likes/views across all users
+
+The code is located inside the `recommendation/` folder and is cleanly modularized for reusability.
+
+---
+
+## 📁 Project Structure
 
 ```
-
 Discover-Places/
-├── templates/           # HTML pages
+├── recommendation/ # ML models (content-based, popularity)
+│ ├── content_based.py
+│ ├── popularity.py
+│ └── init.py
 ├── static/
-│   └── img/             # Uploaded images
-├── recommendation/
-│   ├── content\_based.py
-│   ├── popularity.py
-│   └── **init**.py
-├── app.py               # Flask app
-├── requirements.txt     # Dependencies
-├── README.md            # You’re here!
+│ └── img/ # Place images
+├── templates/ # HTML templates
+│ ├── index.html
+│ ├── about.html
+│ └── contact.html
+├── database/ # DB scripts or migrations (if any)
+├── app.py # Main Flask app
+├── requirements.txt
+├── README.md
 └── ...
-
-````
+```
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Clone the Repo
-
-```bash
+```
 git clone https://github.com/VipranshOjha/Discover-Places.git
 cd Discover-Places
-````
+```
 
-### 2. Install Requirements
+### 2. Create Virtual Environment
+```
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
 
-```bash
+### 3. Install Dependencies
+```
 pip install -r requirements.txt
 ```
 
-### 3. Run the Flask App
+### 4. Set Up PostgreSQL
+Ensure PostgreSQL is installed and running
 
-```bash
-python app.py
+Create a database (e.g., discover_places)
+
+Add your DB config in app.py or a .env file
+
+### 5. Run the App
 ```
+python app.py
+Open http://127.0.0.1:5000 in your browser.
+```
+---
 
-> App runs locally at: `http://127.0.0.1:5000`
+## 📍 Mapping Logic
+GoMapsPro API is used to fetch and display nearby locations
+
+On click, the app redirects users to Google Maps for directions to that place
 
 ---
 
-## 🧠 Recommendation Engines
+## 🛠️ Future Enhancements
+✅ API-based version of the recommendation system
 
-Inside the `recommendation/` folder:
+🌐 Deployment on Render/Railway
 
-* `content_based.py`: Uses metadata similarity (e.g., category, tags) to find similar places.
-* `popularity.py`: Ranks based on user interactions (likes, views, etc.).
+👤 User dashboards and profiles
 
-Each can be imported and run independently or integrated directly into Flask routes.
-
----
-
-## 📍 How Mapping Works
-
-* **GoMapsPro API** is used to fetch detailed place data.
-* When a user clicks the address, they are redirected to **Google Maps** for directions.
+💬 Add reviews or comments for places
 
 ---
 
 ## 🙌 Contributing
-
-Got a feature idea or found a bug?
-Feel free to [open an issue](https://github.com/VipranshOjha/Discover-Places/issues) or submit a pull request!
+Pull requests are welcome! Please open an issue first for major changes.
 
 ---
 
 ## 📬 Connect with Me
+LinkedIn
 
-* [LinkedIn](https://www.linkedin.com/in/vipransh-ojha)
-* [GitHub](https://github.com/VipranshOjha)
+GitHub
 
 ---
 
-> Built with Flask, and a curious mind 🧠💡
-
-```
+Built with ❤️, PostgreSQL, Flask, and a curiosity for exploration.
