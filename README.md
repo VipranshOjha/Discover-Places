@@ -40,8 +40,8 @@ A sophisticated location recommendation system that combines neural networks, co
 <h3>Home & Admin Pages</h3>
 <table>
   <tr>
-    <td><img src="static/img/Search%20Places.png" alt="Home Page" width="400"/></td>td> 
-    <td> <img src="static/img/Admin%20Dashboard.png" alt="Admin Dashboard" width="400"/></td>
+    <td><img src="static/img/Search%20Places.png" alt="Home Page" width="400"/></td>
+    <td><img src="static/img/Admin%20Dashboard.png" alt="Admin Dashboard" width="400"/></td>
   </tr>
 </table>
 
