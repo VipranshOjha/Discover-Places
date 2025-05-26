@@ -1,4 +1,4 @@
-# Smart Location Recommender System
+# Discover Places: Smart Location Recommender System
 
 A sophisticated location recommendation system that combines neural networks, collaborative filtering, and contextual information to provide personalized place recommendations based on user preferences, location, weather, and time.
 
