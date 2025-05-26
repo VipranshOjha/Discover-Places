@@ -1,152 +1,164 @@
-# 🌍 Discover Places
+# Smart Location Recommender System
 
-> A smart, lightweight web app to help users explore new places and get personalized recommendations — powered by machine learning and Flask.
+A sophisticated location recommendation system that combines neural networks, collaborative filtering, and contextual information to provide personalized place recommendations based on user preferences, location, weather, and time.
 
----
+## 🌟 Features
 
-## 🔎 What is Discover Places?
+- **Multi-Model Recommendation Engine**
+  - Neural Network-based recommendations using TensorFlow
+  - Collaborative filtering using SVD (Surprise library)
+  - Context-aware recommendations based on weather and time
+  - "People also search for" suggestions
 
-**Discover Places** is a full-stack Python web application that allows users to:
-- Explore interesting locations
-- Like and save their favorite spots
-- Receive personalized place recommendations
+- **Smart Context Integration**
+  - Weather-aware recommendations
+  - Time-based suggestions (day/night)
+  - Location-based filtering
+  - User preference learning
 
-The platform uses **JWT-based authentication**, a **PostgreSQL database**, and two ML-based engines: **content-based filtering** and **popularity-based ranking** — all served via a clean Flask backend and HTML frontend.
+- **User Management**
+  - Secure authentication system with JWT
+  - User profile management
+  - Interaction tracking
+  - Personalized recommendations
 
----
-
-## ✨ Features
-
-- 🔐 JWT-based Login and Signup
-- 🏙️ Browse curated places
-- ❤️ Like places you enjoy
-- 🧠 Personalized Recommendations:
-  - Content-Based Filtering
-  - Popularity-Based Ranking
-- 🗺️ One-click Google Maps Redirection
-- 🗃️ PostgreSQL-powered backend for data persistence
-- 📄 Modular ML code for easy extensibility
-
----
-
-## 🖼️ UI Preview
-
-# 📝 Signup & Login
-<p align="center"> <img src="static/img/Signup.png" alt="Signup Page" width="45%" /> <img src="static/img/Login.png" alt="Login Page" width="45%" /> </p>
-
-# 🔐 Admin & 🏠 Home 
-<p align="center"> <img src="static/img/Admin%20Dashboard.png" alt="Home Page" width="45%" /> <img src="static/img/Search%20Places.png" alt="Home Page" width="45%" /> </p>
-
-# 🔥 Content-Based & Popularity-Based Recommendation
-<p align="center">  <img src="static/img/Recommended%20For%20You.png" alt="Content-Based Recommendation" width="45%" /> <img src="static/img/People%20Also%20Search%20For.png" alt="Popularity-Based Recommendation" width="45%" /> </p>
-
----
-
-## 🧰 Tech Stack
-
-| Layer        | Technology               |
-|--------------|---------------------------|
-| Backend      | Python, Flask             |
-| Frontend     | HTML, CSS, Bootstrap      |
-| Database     | PostgreSQL                |
-| Auth         | JWT (JSON Web Tokens)     |
-| ML Models    | Scikit-learn, Pandas      |
-| Maps         | GoMapsPro (fetching), Google Maps (navigation) |
-
----
-
-## 🧠 Recommendation System
-
-The app features two types of recommendation models:
-
-1. **Content-Based Filtering**
-   - Recommends places similar to the ones a user has liked
-   - Based on metadata like category, tags, etc.
-
-2. **Popularity-Based Ranking**
-   - Ranks places by likes/views across all users
-
-The code is located inside the `recommendation/` folder and is cleanly modularized for reusability.
-
----
-
-## 📁 Project Structure
-
-```
-Discover-Places/
-├── recommendation/ # ML models (content-based, popularity)
-│ ├── content_based.py
-│ ├── popularity.py
-│ └── init.py
-├── static/
-│ └── img/ # Place images
-├── templates/ # HTML templates
-│ ├── index.html
-│ ├── about.html
-│ └── contact.html
-├── database/ # DB scripts or migrations (if any)
-├── app.py # Main Flask app
-├── requirements.txt
-├── README.md
-└── ...
-```
-
----
+- **Admin Dashboard**
+  - User management
+  - System monitoring
+  - Analytics dashboard
 
 ## 🚀 Getting Started
 
-### 1. Clone the Repo
-```
-git clone https://github.com/VipranshOjha/Discover-Places.git
-cd Discover-Places
+### Prerequisites
+
+- Python 3.8+
+- PostgreSQL
+- Google Maps API key
+- Virtual environment (recommended)
+
+### Dependencies
+
+The project uses several key libraries:
+- **Web Framework**: Flask 2.3.2
+- **Database**: 
+  - Flask-SQLAlchemy 3.1.1
+  - psycopg2-binary 2.9.9 (PostgreSQL adapter)
+- **Machine Learning**: 
+  - TensorFlow 2.15.0
+  - scikit-learn 1.3.2
+  - Surprise 0.1
+  - NumPy 1.24.3
+- **Data Processing**: pandas 2.1.1
+- **Authentication**: PyJWT 2.8.0
+- **Utilities**: 
+  - python-dotenv 1.0.1
+  - requests 2.31.0
+  - joblib 1.3.2
+  - Werkzeug 2.3.7
+- **Production Server**: gunicorn 21.2.0
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd [repository-name]
 ```
 
-### 2. Create Virtual Environment
-```
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+2. Create and activate a virtual environment:
+```bash
+# On Windows
+python -m venv .venv
+.venv\Scripts\activate
+
+# On Unix/MacOS
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-### 3. Install Dependencies
-```
+3. Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set Up PostgreSQL
-Ensure PostgreSQL is installed and running
-
-Create a database (e.g., discover_places)
-
-Add your DB config in app.py or a .env file
-
-### 5. Run the App
+4. Set up environment variables:
+Create a `.env` file in the root directory with:
 ```
+GOMAPS_API_KEY=your_google_maps_api_key
+```
+
+5. Set up the database:
+```bash
+# Make sure PostgreSQL is running
+# Update the database URI in app.py with your credentials:
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://username:password@localhost/dbname'
+```
+
+6. Run the application:
+```bash
+# Development
 python app.py
-Open http://127.0.0.1:5000 in your browser.
+
+# Production
+gunicorn app:app
 ```
----
 
-## 📍 Mapping Logic
-GoMapsPro API is used to fetch and display nearby locations
+## 🏗️ Project Structure
 
-On click, the app redirects users to Google Maps for directions to that place
+```
+├── app.py                 # Main application file
+├── model.py              # Database models
+├── People_also_search_for.py  # Collaborative filtering implementation
+├── Recommended_for_you_nn.py  # Neural network recommendation system
+├── templates/            # HTML templates
+├── static/              # Static assets
+├── admin/               # Admin dashboard
+├── *.pkl               # Encoder files
+└── *.keras             # Neural network model
+```
 
----
+## 🔧 Configuration
 
-## 🛠️ Future Enhancements
-✅ API-based version of the recommendation system
+The system uses several machine learning models and encoders:
+- `recommender_model.keras`: Neural network model for personalized recommendations
+- `svd_model.pkl`: Collaborative filtering model
+- Encoder files:
+  - `user_encoder.pkl`: User data encoding
+  - `interest_encoder.pkl`: Interest categories encoding
+  - `pincode_encoder.pkl`: Location encoding
+  - `weather_encoder.pkl`: Weather conditions encoding
+  - `lat_scaler.pkl` & `lon_scaler.pkl`: Location scaling
 
-🌐 Deployment on Render/Railway
+## 📝 API Endpoints
 
-👤 User dashboards and profiles
+- `/login` - User authentication
+- `/signup` - New user registration
+- `/recommend` - Get personalized recommendations
+- `/recommend/context` - Get context-aware recommendations
+- `/recommend/collaborative` - Get collaborative filtering recommendations
+- `/search` - Search for places
+- `/me` - Get current user information
 
-💬 Add reviews or comments for places
+## 🔒 Security
 
----
+- JWT-based authentication with 15-minute expiry
+- Password hashing using Werkzeug
+- Secure cookie handling
+- Environment variable protection
+- SQL injection prevention through SQLAlchemy
 
-## 🙌 Contributing
-Pull requests are welcome! Please open an issue first for major changes.
+## 🤝 Contributing
 
----
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-Built with ❤️, PostgreSQL, Flask, and a curiosity for exploration.
+## 🙏 Acknowledgments
+
+- Google Maps API for location data
+- TensorFlow for neural network implementation
+- Surprise library for collaborative filtering
+- Flask for the web framework
+- PostgreSQL for database management 

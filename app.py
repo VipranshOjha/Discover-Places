@@ -6,7 +6,9 @@ import re
 import jwt
 from datetime import datetime, timedelta
 from model import db, User, UserInteraction
-from Recommended_for_you import recommend_interest_and_pincode as context_recommender
+import tensorflow as tf
+import joblib
+import numpy as np
 from People_also_search_for import (
     recommend_interest_and_pincode as collab_recommender_fn,
     CollaborativeRecommender
@@ -16,7 +18,54 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from admin import admin_bp
 from sqlalchemy.sql import func, desc
 
-collab_recommender = CollaborativeRecommender()
+# Initialize model and encoders as None
+model = None
+user_encoder = None
+interest_encoder = None
+pincode_encoder = None
+weather_encoder = None
+lat_scaler = None
+lon_scaler = None
+
+def load_model_and_encoders():
+    global model, user_encoder, interest_encoder, pincode_encoder, weather_encoder, lat_scaler, lon_scaler
+    try:
+        # Check if files exist
+        required_files = [
+            "recommender_model.keras",
+            "user_encoder.pkl",
+            "interest_encoder.pkl",
+            "pincode_encoder.pkl",
+            "weather_encoder.pkl",
+            "lat_scaler.pkl",
+            "lon_scaler.pkl"
+        ]
+        
+        missing_files = [f for f in required_files if not os.path.exists(f)]
+        if missing_files:
+            print("Missing required files:", missing_files)
+            return False
+            
+        # Load model and encoders
+        model = tf.keras.models.load_model("recommender_model.keras")
+        user_encoder = joblib.load('user_encoder.pkl')
+        interest_encoder = joblib.load('interest_encoder.pkl')
+        pincode_encoder = joblib.load('pincode_encoder.pkl')
+        weather_encoder = joblib.load('weather_encoder.pkl')
+        lat_scaler = joblib.load('lat_scaler.pkl')
+        lon_scaler = joblib.load('lon_scaler.pkl')
+        
+        print("Successfully loaded model and encoders")
+        return True
+        
+    except Exception as e:
+        print("Error loading model and encoders:", str(e))
+        import traceback
+        print("Full traceback:", traceback.format_exc())
+        return False
+
+# Try to load model and encoders at startup
+model_loaded = load_model_and_encoders()
 
 load_dotenv()
 
@@ -29,6 +78,17 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:boathead@localhos
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+
+# Initialize collaborative recommender inside app context
+collab_recommender = None
+
+def init_collab_recommender():
+    global collab_recommender
+    collab_recommender = CollaborativeRecommender()
+
+with app.app_context():
+    db.create_all()
+    init_collab_recommender()
 
 def generate_jwt(user_id, username):
     payload = {
@@ -117,115 +177,220 @@ def logout():
     response.delete_cookie('jwt_token')
     return response
 
-@app.route('/search', methods=['POST'])
-def search_places():
-    user = get_current_user()  # Might be None
-
-    data = request.json
-    pincode = data.get('pincode')
-    interest = data.get('interest')
-
-    if not pincode or not interest:
-        return jsonify({"error": "PIN code and interest are required"}), 400
-
-    # Save for logged in user only
-    if user:
-        user.preferred_pincode = pincode
-        user.field_of_interest = interest
-        db.session.commit()
-
-        interaction = UserInteraction(
-            user_id=str(user.id),
-            interest=interest,
-            pincode=pincode,
-            timestamp=datetime.now()
-        )
-        db.session.add(interaction)
-        db.session.commit()
-        collab_recommender.add_interaction(interaction)
-
-    return search_places_core(pincode, interest)
-
-    data = request.json
-    pincode = data.get('pincode')
-    interest = data.get('interest')
-
-    if not pincode or not interest:
-        return jsonify({"error": "PIN code and interest are required"}), 400
-
-    user.preferred_pincode = pincode
-    user.field_of_interest = interest
-    db.session.commit() 
-
-    interaction = UserInteraction(
-        user_id=str(user.id),
-        interest=interest,
-        pincode=pincode,
-        timestamp=datetime.now()
-    )
-    db.session.add(interaction)
-    db.session.commit()
-    collab_recommender.add_interaction(interaction)
-
-    return search_places_core(pincode, interest)
-
-@app.route('/me')
-def check_login():
-    user = get_current_user()
-    return jsonify({
-        "logged_in": bool(user),
-        "username": user.username if user else None
-    })
+def get_nn_recommendation(user_id, latitude, longitude, weather_condition, is_day):
+    if not model_loaded:
+        raise ValueError("Model and encoders not properly loaded")
+        
+    try:
+        # Get current time features
+        current_time = datetime.now()
+        hour = current_time.hour
+        day_of_week = current_time.weekday()
+        month = current_time.month
+        season = (month % 12 + 3) // 3  # 1: Spring, 2: Summer, 3: Fall, 4: Winter
+        
+        print("Time features:", {
+            "hour": hour,
+            "day_of_week": day_of_week,
+            "month": month,
+            "season": season
+        })
+        
+        # Encode inputs
+        try:
+            user_enc = user_encoder.transform([user_id])[0]
+            print("User encoded:", user_enc)
+        except Exception as e:
+            print("Error encoding user:", str(e))
+            raise ValueError(f"Invalid user_id: {user_id}")
+            
+        try:
+            weather_enc = weather_encoder.transform([weather_condition])[0]
+            print("Weather encoded:", weather_enc)
+        except Exception as e:
+            print("Error encoding weather:", str(e))
+            raise ValueError(f"Invalid weather_condition: {weather_condition}")
+        
+        # Scale coordinates
+        try:
+            lat_scaled = lat_scaler.transform([[latitude]])[0][0]
+            lon_scaled = lon_scaler.transform([[longitude]])[0][0]
+            print("Scaled coordinates:", {"lat": lat_scaled, "lon": lon_scaled})
+        except Exception as e:
+            print("Error scaling coordinates:", str(e))
+            raise ValueError(f"Invalid coordinates: lat={latitude}, lon={longitude}")
+        
+        # Prepare input arrays
+        inputs = [
+            np.array([user_enc]),
+            np.array([hour]),
+            np.array([day_of_week]),
+            np.array([season]),
+            np.array([weather_enc]),
+            np.array([is_day]),
+            np.array([lat_scaled]),
+            np.array([lon_scaled]),
+            np.array([0])  # Default last interest
+        ]
+        
+        print("Model inputs prepared")
+        
+        # Get predictions
+        try:
+            interest_pred, pincode_pred = model.predict(inputs)
+            print("Model predictions received")
+        except Exception as e:
+            print("Error in model prediction:", str(e))
+            raise ValueError("Failed to get model predictions")
+        
+        # Get most likely interest and pincode
+        interest_idx = np.argmax(interest_pred[0])
+        pincode_idx = np.argmax(pincode_pred[0])
+        
+        try:
+            interest = interest_encoder.inverse_transform([interest_idx])[0]
+            pincode = pincode_encoder.inverse_transform([pincode_idx])[0]
+            print("Decoded predictions:", {"interest": interest, "pincode": pincode})
+        except Exception as e:
+            print("Error decoding predictions:", str(e))
+            raise ValueError("Failed to decode model predictions")
+        
+        return interest, pincode
+        
+    except Exception as e:
+        print("Error in get_nn_recommendation:", str(e))
+        import traceback
+        print("Full traceback:", traceback.format_exc())
+        raise
 
 @app.route('/recommend/context', methods=['POST'])
 def recommend_contextual():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
 
-    if not user.preferred_pincode or not user.field_of_interest:
-        return jsonify({"results": []})
+        if not user.preferred_pincode or not user.field_of_interest:
+            return jsonify({"results": []})
 
-    recent_interactions = (
-        UserInteraction.query
-        .filter_by(user_id=str(user.id))
-        .order_by(UserInteraction.timestamp.desc())
-        .limit(5)
-        .all()
-    )
+        # Get user's last interaction for location and weather data
+        last_interaction = (
+            UserInteraction.query
+            .filter_by(user_id=str(user.id))
+            .order_by(UserInteraction.timestamp.desc())
+            .first()
+        )
 
-    searches = [
-        {'interest': i.interest, 'pincode': i.pincode}
-        for i in recent_interactions
-    ]
+        if not last_interaction:
+            print("No interaction history found for user:", user.id)
+            return jsonify({"results": []})
 
-    recommendation = context_recommender(searches)
-    if not recommendation:
-        return jsonify({"results": []})
+        # Check if we have valid location data
+        if last_interaction.latitude is None or last_interaction.longitude is None:
+            print("Missing location data in last interaction")
+            return jsonify({"results": []})
 
-    interest, pincode = recommendation
-    return search_places_core(pincode, interest)
+        print("Last interaction found:", {
+            "user_id": last_interaction.user_id,
+            "latitude": last_interaction.latitude,
+            "longitude": last_interaction.longitude,
+            "weather": last_interaction.weather_condition,
+            "is_day": last_interaction.is_day
+        })
+
+        try:
+            # Get recommendation using neural network
+            if model_loaded:
+                interest, pincode = get_nn_recommendation(
+                    user_id=str(user.id),
+                    latitude=last_interaction.latitude,
+                    longitude=last_interaction.longitude,
+                    weather_condition=last_interaction.weather_condition or "clear",
+                    is_day=last_interaction.is_day or True
+                )
+            else:
+                return jsonify({"error": "Neural network model not loaded"}), 503
+
+            print("NN recommendation:", {"interest": interest, "pincode": pincode})
+
+            # Get search results
+            search_data = search_places_core_raw(pincode, interest)
+            print("Search data:", search_data)
+            
+            # Ensure we return proper JSON response
+            if "error" in search_data:
+                return jsonify({"error": search_data["error"]}), 400
+                
+            return jsonify({"results": search_data.get("results", [])})
+
+        except Exception as e:
+            print("Error in recommendation process:", str(e))
+            import traceback
+            print("Full traceback:", traceback.format_exc())
+            return jsonify({"error": f"Failed to generate recommendations: {str(e)}"}), 500
+
+    except Exception as e:
+        print("Error in context recommendation route:", str(e))
+        import traceback
+        print("Full traceback:", traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
 
 @app.route('/recommend/collaborative', methods=['POST'])
 def recommend_collaborative():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+    try:
+        user = get_current_user()
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
 
-    if not user.preferred_pincode or not user.field_of_interest:
-        return jsonify({"results": []})
+        if not user.preferred_pincode or not user.field_of_interest:
+            return jsonify({"results": []})
 
-    searches = [{'interest': user.field_of_interest, 'pincode': user.preferred_pincode}]
-    recommendation = collab_recommender_fn(
-        searches,
-        user_id=str(user.id),
-        collaborative_recommender=collab_recommender
-    )
-    if not recommendation:
-        return jsonify({"results": []})
+        # Get user's recent interactions
+        recent_interactions = (
+            UserInteraction.query
+            .filter_by(user_id=str(user.id))
+            .order_by(UserInteraction.timestamp.desc())
+            .limit(5)
+            .all()
+        )
 
-    interest, pincode = recommendation
-    return search_places_core(pincode, interest)
+        if not recent_interactions:
+            return jsonify({"results": []})
+
+        # Convert interactions to search format
+        searches = [
+            {
+                'interest': i.interest,
+                'pincode': i.pincode,
+                'latitude': i.latitude,
+                'longitude': i.longitude
+            }
+            for i in recent_interactions
+        ]
+
+        # Get recommendation using collaborative filtering
+        recommendation = collab_recommender_fn(
+            searches,
+            user_id=str(user.id),
+            collaborative_recommender=collab_recommender
+        )
+
+        if not recommendation:
+            return jsonify({"results": []})
+
+        interest, pincode = recommendation
+        search_data = search_places_core_raw(pincode, interest)
+        
+        if "error" in search_data:
+            return jsonify({"error": search_data["error"]}), 400
+            
+        return jsonify({"results": search_data.get("results", [])})
+
+    except Exception as e:
+        print("Error in collaborative recommendation:", str(e))
+        import traceback
+        print("Full traceback:", traceback.format_exc())
+        return jsonify({"error": "Failed to generate recommendations"}), 500
 
 @app.route('/recommend', methods=['POST'])
 def recommend_places():
@@ -343,11 +508,200 @@ def search_places_core(pincode, interest):
                 "map_link": map_link
             })
 
-        return jsonify({"results": all_results})
+        return {
+            "results": all_results,
+            "lat": lat,
+            "lng": lng
+        }
 
     except Exception as e:
         print("Exception:", e)
-        return jsonify({"error": str(e)}), 500
+        return {"error": str(e)}
+
+@app.route('/search_api', methods=['POST'])
+def search_places_api():
+    data = request.json
+    pincode = data.get('pincode')
+    interest = data.get('interest')
+
+    if not pincode or not interest:
+        return jsonify({"error": "PIN code and interest are required"}), 400
+
+    # Call the search_places_core function to get search data
+    result = search_places_core_raw(pincode, interest)
+    return jsonify(result)
+
+def search_places_core_raw(pincode, interest):
+    if not pincode or not interest:
+        return {"error": "PIN code and interest are required"}
+
+    if not API_KEY:
+        return {"error": "GOMAPS API key is not configured"}
+
+    try:
+        # Get district/state from pincode
+        pin_url = f"https://api.postalpincode.in/pincode/{pincode}"
+        pin_response = requests.get(pin_url).json()
+        if pin_response[0]['Status'] != 'Success':
+            return {"error": "Invalid PIN code"}
+
+        district = pin_response[0]['PostOffice'][0]['District']
+        state = pin_response[0]['PostOffice'][0]['State']
+
+        # Step 1: Geocode the pincode to get lat/lng
+        geocode_url = f"https://maps.gomaps.pro/maps/api/geocode/json"
+        geocode_params = {
+            'address': pincode,
+            'key': API_KEY
+        }
+        geo_resp = requests.get(geocode_url, params=geocode_params).json()
+
+        if 'status' not in geo_resp:
+            return {"error": "Geocode API response missing 'status'."}
+
+        if geo_resp.get('status') == 'OK':
+            location = geo_resp['results'][0]['geometry']['location']
+            lat, lng = location['lat'], location['lng']
+        else:
+            return {"error": f"Failed to geocode pincode: {geo_resp.get('status')}"}
+
+        # Format query based on interest
+        query_term = INTEREST_KEYWORDS.get(interest.lower(), interest)
+        search_query = f"{query_term} in {district}, {state}, India"
+
+        # Step 2: Use lat/lng and radius in textsearch
+        search_url = f"https://maps.gomaps.pro/maps/api/place/textsearch/json"
+        params = {
+            'query': search_query,
+            'location': f"{lat},{lng}",
+            'radius': 2000,
+            'key': API_KEY,
+            'language': 'en',
+            'region': 'in'
+        }
+        
+        search_response = requests.get(search_url, params=params)
+        if not search_response.ok:
+            return {"error": "Failed to contact GOMAPS API"}
+
+        search_data = search_response.json()
+
+        if search_data.get("status") != "OK":
+            return {"error": f"GOMAPS API error: {search_data.get('status')}"}
+
+        places = search_data.get("results", [])
+        if not places:
+            return {"message": "No places found for your search criteria."}
+
+        # Step 3: Filter results by pincode in address
+        filtered_places = []
+        for place in places:
+            address = place.get("formatted_address", "")
+            # Strict pincode match
+            if re.search(r'\b{}\b'.format(re.escape(str(pincode))), address):
+                filtered_places.append(place)
+
+        all_results = []
+        # Only use strictly filtered places
+        for place in filtered_places:
+            place_id = place.get("place_id")
+            name = place.get("name", "Unknown Place")
+            address = place.get("formatted_address", "No address available")
+            types = place.get("types", [])
+            place_type = ", ".join(types).replace("_", " ").title()
+
+            # Use photo_reference from textsearch result
+            photo_url = "/static/images/default_place.jpg"
+            photos = place.get("photos")
+            if photos and len(photos) > 0:
+                ref = photos[0].get("photo_reference")
+                if ref:
+                    photo_url = f"https://maps.gomaps.pro/maps/api/place/photo?maxwidth=400&photo_reference={ref}&key={API_KEY}"
+
+            # Map link
+            map_link = get_map_link(name, address)
+
+            all_results.append({
+                "name": name,
+                "address": address,
+                "place_type": place_type,
+                "photo_reference": photo_url,
+                "description": f"A {interest.lower()} place in {district}, {state}.",
+                "map_link": map_link
+            })
+
+        return {
+            "results": all_results,
+            "lat": lat,
+            "lng": lng
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.route('/search', methods=['POST'])
+def search_places():
+    try:
+        user = get_current_user()  # Might be None
+
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        pincode = data.get('pincode')
+        interest = data.get('interest')
+
+        if not pincode or not interest:
+            return jsonify({"error": "PIN code and interest are required"}), 400
+
+        try:
+            # Call the search_places_core function to get search data
+            search_data = search_places_core_raw(pincode, interest)
+
+            # Save user interaction with lat/lng and weather data if the user is authenticated
+            if user:
+                try:
+                    interaction = UserInteraction(
+                        user_id=str(user.id),
+                        interest=interest,
+                        pincode=pincode,
+                        timestamp=datetime.now(),
+                        latitude=search_data.get("lat"),
+                        longitude=search_data.get("lng"),
+                        weather_condition=search_data.get("weather_condition"),
+                        is_day=search_data.get("is_day"),
+                        temperature=search_data.get("temperature")
+                    )
+                    db.session.add(interaction)
+                    db.session.commit()
+                except Exception as e:
+                    print("Error saving user interaction:", str(e))
+                    # Continue even if saving interaction fails
+
+            # Return results to frontend
+            if "error" in search_data:
+                return jsonify({"error": search_data["error"]}), 400
+            return jsonify({"results": search_data.get("results", [])})
+
+        except Exception as e:
+            print("Error in search process:", str(e))
+            import traceback
+            print("Full traceback:", traceback.format_exc())
+            return jsonify({"error": "Failed to process search request"}), 500
+
+    except Exception as e:
+        print("Error in /search route:", str(e))
+        import traceback
+        print("Full traceback:", traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/me')
+def check_login():
+    user = get_current_user()
+    return jsonify({
+        "logged_in": bool(user),
+        "username": user.username if user else None
+    })
 
 if __name__ == '__main__':
     with app.app_context():

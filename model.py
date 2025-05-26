@@ -23,6 +23,11 @@ class UserInteraction(db.Model):
     interest = db.Column(db.String(80), nullable=False)
     pincode = db.Column(db.String(10), nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False)
+    weather_condition = db.Column(db.String(50))
+    is_day = db.Column(db.Boolean)
+    temperature = db.Column(db.Float)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
 
     @classmethod
     def most_active_time_of_day(cls, user_id):
