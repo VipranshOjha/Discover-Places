@@ -27,6 +27,32 @@ A sophisticated location recommendation system that combines neural networks, co
   - System monitoring
   - Analytics dashboard
 
+<h2>📸 UI Preview – Login, Home, Admin & Recommendations</h2>
+
+<h3>Login & Signup Pages</h3>
+<table>
+  <tr>
+    <td><img src="static/img/Login.png" alt="Login Page" width="400"/></td>
+    <td><img src="static/img/Signup.png" alt="Signup Page" width="400"/></td>
+  </tr>
+</table>
+
+<h3>Home & Admin Pages</h3>
+<table>
+  <tr>
+    <td><img src="static/img/Search%20Places.png" alt="Home Page" width="400"/></td>td> 
+    <td> <img src="static/img/Admin%20Dashboard.png" alt="Admin Dashboard" width="400"/></td>
+  </tr>
+</table>
+
+<h3>Recommendations</h3>
+<table>
+  <tr>
+    <td><img src="static/img/Recommended%20For%20You.png" alt="Recommended For You" width="400"/></td>
+    <td><img src="static/img/People%20Also%20Search%20For.png" alt="People Also Search For" width="400"/></td>
+  </tr>
+</table>
+
 ## 🚀 Getting Started
 
 ### Prerequisites
