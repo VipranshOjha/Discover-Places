@@ -2,7 +2,7 @@ Flask==2.3.2
 requests==2.31.0
 python-dotenv==1.0.1
 PyJWT==2.8.0
-pandas==2.1.1
+pandas==2.0.3
 surprise==0.1
 tensorflow==2.15.0
 numpy==1.24.3
