@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Discover Places</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/styles.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f7fff7;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .signup-box {
+            background: white;
+            padding: 80px;
+            border-radius: 20px;
+            box-shadow: 0 5px 30px rgba(0,0,0,0.15);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .signup-box h2 {
+            margin-bottom: 40px;
+            color: #292f36;
+            text-align: center;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .info-icon-wrapper {
+            display: inline-block;
+            position: relative;
+            margin-left: 8px;
+        }
+
+        .info-icon-wrapper .circle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid red;
+            color: red;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            width: 240px;
+            background-color: #fff6f6;
+            color: #b30000;
+            text-align: left;
+            border: 1px solid #ffcccc;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 130%;
+            left: 0;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 10px rgba(255, 0, 0, 0.1);
+        }
+
+        .info-icon-wrapper:hover .tooltip {
+            visibility: visible;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 18px;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            transition: border 0.3s;
+        }
+
+        input.valid {
+            border-color: #4ecdc4;
+        }
+
+        input.invalid {
+            border-color: red;
+        }
+
+        input:focus {
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 18px;
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #38b8ad;
+        }
+
+        .msg {
+            text-align: center;
+            color: #d9534f;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .alt-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1rem;
+        }
+
+        .alt-link a {
+            color: #ff6b6b;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-box bounce-in">
+        <h2><i class="fas fa-user-plus"></i> Sign Up</h2>
+        {% if message %}<div class="msg">{{ message }}</div>{% endif %}
+        <form method="POST" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address
+                    <span class="info-icon-wrapper">
+                        <div class="tooltip">Must be a valid email (e.g. example@gmail.com)</div>
+                        <span class="circle">i</span>
+                    </span>
+                </label>
+                <input type="text" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password
+                    <span class="info-icon-wrapper">
+                        <div class="tooltip">Minimum 8 characters, 1 capital letter, 1 special character</div>
+                        <span class="circle">i</span>
+                    </span>
+                </label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Sign Up</button>
+        </form>        
+        <div class="alt-link">
+            Already have an account? <a href="/login">Log in</a>
+        </div>
+    </div>
+
+    <script>
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        emailInput.addEventListener('input', validateForm);
+        passwordInput.addEventListener('input', validateForm);
+
+        function validateForm() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const hasCapital = /[A-Z]/.test(password);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            let valid = true;
+
+            if (!emailPattern.test(email)) {
+                emailInput.classList.remove('valid');
+                emailInput.classList.add('invalid');
+                valid = false;
+            } else {
+                emailInput.classList.remove('invalid');
+                emailInput.classList.add('valid');
+            }
+
+            if (password.length < 8 || !hasCapital || !hasSpecial) {
+                passwordInput.classList.remove('valid');
+                passwordInput.classList.add('invalid');
+                valid = false;
+            } else {
+                passwordInput.classList.remove('invalid');
+                passwordInput.classList.add('valid');
+            }
+
+            return valid;
+        }
+    </script>
+</body>
+</html>

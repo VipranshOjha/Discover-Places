@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Flask==2.3.2
 requests==2.31.0
 python-dotenv==1.0.1
@@ -12,3 +13,19 @@ Flask-SQLAlchemy==3.1.1
 psycopg2-binary==2.9.9
 Werkzeug==2.3.7
 gunicorn==21.2.0
+=======
+Flask==2.3.2
+requests==2.31.0
+python-dotenv==1.0.1
+PyJWT==2.8.0
+pandas==2.1.1
+surprise==0.1
+tensorflow==2.15.0
+numpy==1.24.3
+scikit-learn==1.3.2
+joblib==1.3.2
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.9
+Werkzeug==2.3.7
+gunicorn==21.2.0
+>>>>>>> cb83b1a40305781fd5f48ffcc08ca9c305d45b06

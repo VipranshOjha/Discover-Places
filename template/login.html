@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login - Discover Places</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"/>
+  <link href="/static/css/styles.css" rel="stylesheet"/>
+  <style>
+    body {
+      background-color: #f7fff7;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .top-nav {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 30px;
+      z-index: 1000;
+    }
+
+    .top-nav a {
+      color: #292f36;
+      font-weight: bold;
+      text-decoration: none;
+      font-size: 1rem;
+      background: #ffe66d;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: background 0.3s;
+    }
+
+    .top-nav a:hover {
+      background: #ffd633;
+    }
+
+    .login-box {
+      background: white;
+      padding: 80px;
+      border-radius: 20px;
+      box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .login-box h2 {
+      margin-bottom: 40px;
+      color: #292f36;
+      text-align: center;
+      font-size: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 18px;
+      border: 2px solid #e1e1e1;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      transition: border 0.3s;
+    }
+
+    input:focus {
+      border-color: #4ecdc4;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 18px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #ff5252;
+    }
+
+    .msg {
+      text-align: center;
+      color: #d9534f;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+
+    .alt-link {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 1rem;
+    }
+
+    .alt-link a {
+      color: #4ecdc4;
+      text-decoration: none;
+    }
+
+    .toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #f0fff4;
+      color: #2f855a;
+      text-align: center;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 8px 24px rgba(72, 187, 120, 0.3);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-left: 6px solid #38a169;
+    }
+
+    .toast.show {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .toast .icon {
+      background-color: #38a169;
+      color: white;
+      border-radius: 50%;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .toast .close-btn {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      color: #2f855a;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  
+
+  <div class="login-box bounce-in">
+    <h2><i class="fas fa-user-lock"></i> Login</h2>
+    {% if message %}<div class="msg">{{ message }}</div>{% endif %}
+    <form method="POST">
+      <div class="form-group">
+        <label for="username">Username or Email</label>
+        <input type="text" id="username" name="username" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required />
+      </div>
+      <button type="submit">Log In</button>
+    </form>
+    <div class="alt-link">
+      Don't have an account? <a href="/signup">Sign up</a>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <div class="icon"><i class="fas fa-check"></i></div>
+    <span>Sign up successful!</span>
+    <button class="close-btn" onclick="document.getElementById('toast').style.display='none';">&times;</button>
+  </div>
+
+  <!-- Toast Script -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const signedUp = params.get('signed_up');
+      const loggedOut = params.get('logged_out');
+  
+      if (signedUp === '1' && !loggedOut) {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+  
+        // Automatically hide after 3s
+        setTimeout(() => {
+          toast.classList.remove('show');
+  
+          // Clean up URL parameters
+          const url = new URL(window.location);
+          url.searchParams.delete('signed_up');
+          url.searchParams.delete('logged_out');
+          window.history.replaceState({}, document.title, url.pathname);
+        }, 3000);
+      }
+    });
+  </script>
+  
+</body>
+</html>
