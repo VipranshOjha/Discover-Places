@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+instance/
+recommender_model.keras
+*.pkl
