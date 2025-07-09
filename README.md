@@ -197,7 +197,7 @@ A sophisticated location recommendation system that combines neural networks, co
 <h3>Login & Signup Pages</h3>
 <table>
   <tr>
-    <td><img src="![Login](https://github.com/user-attachments/assets/df7ea2e0-5a4c-4bc4-950b-6e5cb8f0ff25)" alt="Login Page" width="400"/></td>
+    <td><img src="![Login](https://github.com/user-attachments/assets/df7ea2e0-5a4c-4bc4-950b-6e5cb8f0ff25)" width="400"/></td>
     <td><img src="static/img/Signup.png" alt="Signup Page" width="400"/></td>
   </tr>
 </table>
