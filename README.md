@@ -353,4 +353,4 @@ The system uses several machine learning models and encoders:
 - Surprise library for collaborative filtering
 - Flask for the web framework
 - PostgreSQL for database management 
->>>>>>> cb83b1a40305781fd5f48ffcc08ca9c305d45b06
+
