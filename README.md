@@ -197,24 +197,24 @@ A sophisticated location recommendation system that combines neural networks, co
 <h3>Login & Signup Pages</h3>
 <table>
   <tr>
-    <td><img src="![Login](https://github.com/user-attachments/assets/df7ea2e0-5a4c-4bc4-950b-6e5cb8f0ff25)" width="400"/></td>
-    <td><img src="static/img/Signup.png" alt="Signup Page" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/df7ea2e0-5a4c-4bc4-950b-6e5cb8f0ff25" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/8160b7e2-7769-44c0-ab34-8cb9f1344b0e" alt="Signup Page" width="400"/></td>
   </tr>
 </table>
 
 <h3>Home & Admin Pages</h3>
 <table>
   <tr>
-    <td><img src="static/img/Search%20Places.png" alt="Home Page" width="400"/></td>
-    <td><img src="static/img/Admin%20Dashboard.png" alt="Admin Dashboard" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/c8742dce-ab7b-4cb5-a595-fbffd1773aa5" alt="Home Page" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/7c882964-0121-4240-b74c-41de994d2f23" alt="Admin Dashboard" width="400"/></td>
   </tr>
 </table>
 
 <h3>Recommendations</h3>
 <table>
   <tr>
-    <td><img src="static/img/Recommended%20For%20You.png" alt="Recommended For You" width="400"/></td>
-    <td><img src="static/img/People%20Also%20Search%20For.png" alt="People Also Search For" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/92b9bee1-7fc8-44b8-994a-793f5ca6c1de" alt="Recommended For You" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/8c77681e-4691-4022-9ba8-4f2558a5e1ad" alt="People Also Search For" width="400"/></td>
   </tr>
 </table>
 
